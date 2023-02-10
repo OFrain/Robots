@@ -24,7 +24,7 @@ void harrisCornerDetector() {
 
     // Normalizing - Convert corner values to integer so they can be drawn
     normalize(output, output_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
-    convertScaleAbs(output_norm, output_norm_scaled);
+    convertScaleAbs(output_norm, output_norm_scaled); 
 
     // Drawing a circle around corners
     for (int j = 0; j < output_norm.rows; j++) {

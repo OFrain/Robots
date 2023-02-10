@@ -5,20 +5,12 @@
 using namespace cv;
 using namespace std;
 
-int i;
+Mat image, gray;
+Mat output, output_norm, output_norm_scaled;
+
 void harrisCornerDetector() {
-
-    Mat image, gray;
-    Mat output, output_norm, output_norm_scaled;
-
-    // Loading the actual image
-    image = imread("C:\\Users\\Orain\\Downloads\\first_200_right\\first_200_right\\000000.png", IMREAD_COLOR);
-
-    // Edge cases
-    if (image.empty()) {
-        cout << "Error loading image" << endl;
-    }
-    cv::imshow("Original image", image);
+    //Opens orginal image
+    //cv::imshow("Original image", image);
 
     // Converting the color image into grayscale
     cvtColor(image, gray, cv::COLOR_BGR2GRAY);
@@ -37,14 +29,12 @@ void harrisCornerDetector() {
     // Drawing a circle around corners
     for (int j = 0; j < output_norm.rows; j++) {
         for (int i = 0; i < output_norm.cols; i++) {
-            if ((int)output_norm.at<float>(j, i) > 100) {
-                circle(image, Point(i, j), 4, Scalar(0, 0, 255), 2, 8, 0);
+            if ((int)output_norm.at<float>(j, i) > 128) {
+                circle(image, Point(i, j), 4, Scalar(0, 255, 0), 2, 8, 0); //points i and j are where the croner is. 
             }
         }
     }
-
     // Displaying the result
-    cv::resize(image, image, cv::Size(), 1.5, 1.5);
     cv::imshow("Output Harris", image);
     cv::waitKey();
 }
@@ -52,12 +42,21 @@ void harrisCornerDetector() {
 
 int main()
 {
+    // Loading the actual image
+    //image = imread("C:\\Users\\Orain\\Downloads\\first_200_right\\first_200_right\\000000.png", IMREAD_COLOR);
+    image = imread("C:\\Users\\orain\\Downloads\\first_200_right\\first_200_right\\000000.png", IMREAD_COLOR);
 
+    // Edge cases
+    if (image.empty()) {
+        cout << "Error loading image" << endl;
+    }
     harrisCornerDetector();
 
     return 0;
 }
 /*
+
+
 Mat src, src_gray, dst; //src is the colored image src_gray is just a B/W image with the corners 
 int thresh = 128; //Intensity of the corners detections
 int max_thresh = 255;

@@ -1,17 +1,16 @@
 
-#include "opencv2/highgui.hpp"
-#include "opencv2/imgproc.hpp"
-#include <opencv2/ml.hpp>
+#include <opencv2/opencv.hpp>
 #include <iostream>
-
+#include <math.h>
 #include <vector>
-
+#include <chrono>
+#include <thread>
 
 using namespace cv;
 using namespace std;
 
-Mat image, gray;
-Mat output, output_norm, output_norm_scaled;
+Mat image, gray, gray1;
+Mat output, output_norm, output1;
 
 void harrisCornerDetector() {
 
@@ -19,14 +18,13 @@ void harrisCornerDetector() {
     //image = imread("C:\\Users\\Orain\\Downloads\\first_200_right\\first_200_right\\000000.png", IMREAD_COLOR);
     image = imread("C:\\Users\\orain\\Downloads\\first_200_right\\first_200_right\\000000.png", IMREAD_COLOR);
 
+    VideoWriter video = VideoWriter("robotVideo.avi", VideoWriter::fourcc('M', 'J', 'P', 'G'), 30., image.size());
+
     // Edge cases
     if (image.empty()) {
         cout << "Error loading image" << endl;
     }
 
-    //Opens orginal image
-    //cv::imshow("Original image", image);
-    // 
     // Converting the color image into grayscale
     cvtColor(image, gray, cv::COLOR_BGR2GRAY);
 
@@ -39,36 +37,48 @@ void harrisCornerDetector() {
 
     // Normalizing - Convert corner values to integer so they can be drawn
     normalize(output, output_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
-    convertScaleAbs(output_norm, output_norm_scaled); 
-
-    vector<int> kNearestN;
-    vector<int> kNearestNOut;
 
     // Drawing a circle around corners
     for (int j = 0; j < output_norm.rows; j++) {
         for (int i = 0; i < output_norm.cols; i++) {
             if ((int)output_norm.at<float>(j, i) > 128) {
-                circle(image, Point(i, j), 4, Scalar(0, 255, 0), 2, 8, 0); //points i and j are where the corner is. 
-                kNearestN.push_back(i);
-                kNearestN.push_back(j);
-
+                circle(image, Point(i, j), 4, Scalar(0, 255, 0), 2, 8, 0); //points i and j are where the corner is.  
+                //add points to vector or Mat
             }
         }
     }
-
-    for (const int& i : kNearestN) {
-        cout << i << "  ";
-    }
-    
-    int k = 1; 
-    cv::ml::KNearest::findNearest(kNearestN,k,kNearestNOut);
-
-
-    // Displaying the result
     cv::imshow("Output Harris", image);
     cv::waitKey();
-}
+    video.write(image);
 
+    for (int i = 1; i <= 200; i++)
+    {
+        // read next image and compute features
+        String filename = format("%06d.png", i); 
+        Mat img1 = imread("C:\\Users\\orain\\Downloads\\first_200_right\\first_200_right\\" + filename);
+        cvtColor(img1, gray, cv::COLOR_BGR2GRAY);
+        Mat  output_norm1; // Rematch every loop so that its empty
+        cornerHarris(gray, output1, 2, 3, 0.04);
+        normalize(output1, output_norm1, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
+        // Drawing a circle around corners
+        for (int j = 0; j < output_norm1.rows; j++) {
+            for (int i = 0; i < output_norm1.cols; i++) {
+                if ((int)output_norm1.at<float>(j, i) > 128) {
+                    circle(img1, Point(i, j), 4, Scalar(0, 255, 0), 2, 8, 0); //points i and j are where the corner is.  
+                    //add point to array
+                }
+            }
+        }
+        //maybe put matching/knn here btw output(priorImage) and output1(nextImage)
+        //draw lines from old points
+
+        output = output1; //needed for next loop 
+        //cv::imshow("Test loop Out", img1);
+        //cv::waitKey();
+        video.write(img1);
+
+    }
+}
 
 int main()
 {
@@ -76,54 +86,3 @@ int main()
 
     return 0;
 }
-/*
-
-
-Mat src, src_gray, dst; //src is the colored image src_gray is just a B/W image with the corners 
-int thresh = 128; //Intensity of the corners detections
-int max_thresh = 255;
-const char* source_window = "Source image";
-const char* corners_window = "Corners detected";
-
-void cornerHarris_demo(int, void*);
-
-int main(int argc, char** argv)
-{
-    src = imread("C:\\Users\\orain\\Downloads\\first_200_right\\first_200_right\\000000.png");
-    if (src.empty())
-    {
-        cout << "Could not open or find the image!\n" << endl;
-        cout << "Usage: " << argv[0] << " <Input image>" << endl;
-        return -1;
-    }
-    cvtColor(src, src_gray, COLOR_BGR2GRAY); //Converts the arg 1 by a filter arg 3 and saves it in arg 2
-    namedWindow(source_window);              //Opens new window
-    //createTrackbar("Threshold: ", source_window, &thresh, max_thresh, cornerHarris_demo); //creates a slider to adjust the thresh value
-    imshow(source_window, src);             //Fills arg 1 window with arg 2 image                    
-    cornerHarris_demo(0, 0);
-    waitKey();
-    return 0;
-}
-void cornerHarris_demo(int, void*)
-{
-    int blockSize = 2;
-    int apertureSize = 3;
-    double k = 0.04;
-    Mat dst = Mat::zeros(src.size(), CV_32FC1);
-    cornerHarris(src_gray, dst, blockSize, apertureSize, k);
-    Mat dst_norm, dst_norm_scaled;
-    normalize(dst, dst_norm, 0, 255, NORM_MINMAX, CV_32FC1, Mat());
-    convertScaleAbs(dst_norm, dst_norm_scaled);
-    for (int i = 0; i < dst_norm.rows; i++)
-    {
-        for (int j = 0; j < dst_norm.cols; j++)
-        {
-            if ((int)dst_norm.at<float>(i, j) > thresh)
-            {
-                circle(dst_norm_scaled, Point(j, i), 5, Scalar(0), 2, 8, 0);
-            }
-        }
-    }
-    namedWindow(corners_window);
-    imshow(corners_window, dst_norm_scaled);
-}*/

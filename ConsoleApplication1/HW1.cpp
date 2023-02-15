@@ -3,6 +3,7 @@
 #include <opencv2/features2d.hpp>
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
+#include <opencv2/core/cvdef.h>
 #include <iostream>
 #include <chrono>
 #include <thread>
@@ -20,7 +21,7 @@ void harrisCornerDetector() {
     // Loading the actual image
     // image = imread("C:\\Users\\Orain\\Downloads\\first_200_right\\first_200_right\\000000.png", IMREAD_COLOR);
     image = imread("C:\\Users\\orain\\Downloads\\first_200_right\\first_200_right\\000000.png", IMREAD_COLOR); //IMREAD_GRAYSCALE for grey scale IMREAD_COLOR for color
-    VideoWriter video = VideoWriter("robotVideoTest.avi", VideoWriter::fourcc('M', 'J', 'P', 'G'), 30., image.size());
+    VideoWriter video = VideoWriter("TestingKNN.avi", VideoWriter::fourcc('M', 'J', 'P', 'G'), 30., image.size());
 
     // Edge cases
     if (image.empty()) {
@@ -43,22 +44,44 @@ void harrisCornerDetector() {
     detector->detectAndCompute(image, Mat(), keypoints, descriptors);
     cv::drawKeypoints(image, keypoints, output, Scalar(0, 255, 0));
 
-    //cv::imshow("Output Harris", output);
+    //cv::imshow("First Image", output);
     //cv::waitKey();
-    video.write(output);
-
-    for (int i = 1; i <= 50; i++)
+    //video.write(output);
+    for (int j = 1; j <= 200; j++)
     {
-        // read next image and compute features
-        std::vector<cv::KeyPoint> keypoints1;
-        Mat descriptors1;
-        String filename = format("%06d.png", i);
+        // read next image and compute features 
+        String filename = format("%06d.png", j);
         Mat image1 = imread("C:\\Users\\orain\\Downloads\\first_200_right\\first_200_right\\" + filename);
+
+        vector<KeyPoint> keypoints1;
+        Mat descriptors1;
         detector->detectAndCompute(image1, Mat(), keypoints1, descriptors1);
-        //detector->detect(image1, keypoints1);
         cv::drawKeypoints(image1, keypoints1, output1, Scalar(0, 255, 0));
-        //cv::imshow("Output Harris 1", output);
+
+        cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create("BruteForce");
+        std::vector<std::vector<cv::DMatch>> knn_matches;
+        matcher->knnMatch(descriptors, descriptors1, knn_matches, 2);
+
+
+        // Filter matches based on distance ratio test
+        std::vector<cv::DMatch> good_matches;
+        for (size_t i = 0; i < knn_matches.size(); i++) {
+            if (knn_matches[i][0].distance < 0.65 * knn_matches[i][1].distance) {
+                good_matches.push_back(knn_matches[i][0]);
+            }
+        }
+        for (size_t i = 0; i < good_matches.size(); i++) {
+            cv::KeyPoint kp1 = keypoints[good_matches[i].queryIdx];
+            cv::KeyPoint kp2 = keypoints1[good_matches[i].trainIdx];
+            cv::line(output1, kp1.pt, kp2.pt, cv::Scalar(0, 255, 0));
+        }
+
+        //imshow("Matches", output1);
         //cv::waitKey();
+        //Needed for the next loop 
+        image = image1; 
+        keypoints = keypoints1;
+        descriptors = descriptors1;
         video.write(output1);
     }
     
@@ -78,7 +101,7 @@ int main()
     cv::imwrite("sift_result.jpg", output);
 
     // Converting the color image into grayscale
-    cvtColor(image, gray, cv::COLOR_BGR2GRAY);
+    cvtColor(image, gray, cv::COLOR_BGR2GRAY); 
 
     // Detecting corners using the cornerHarris built in function
     output = Mat::zeros(image.size(), CV_32FC1);
